@@ -2,7 +2,7 @@
 
 **Competition:** [3LC Multi-Vehicle Detection Challenge](https://www.kaggle.com/competitions/3-lc-multi-vehicle-detection-challenge)  
 **Final Rank:** 🥈 2nd Place  
-**Public Score:** 0.94052 | **Private Score:** ~0.94 (close to public)  
+**Public Score:** 0.95099 | **Private Score:** 0.94052  
 **Model:** YOLOv8n (from scratch, no pretrained weights)  
 **Key insight:** Data-centric iteration — repeatedly fixing missing labels via 3LC Dashboard drove the largest mAP gains.
 
@@ -42,8 +42,8 @@ Train baseline → 3LC Dashboard (Missing Label Workflow) → Add missing labels
 
 ### 3LC Dashboard evidence
 The `screenshots/` folder contains evidence of the label cleaning process:
-- **tables.png** — 61 table revisions (EditedBoundingBox, CreatedBoundingBox, ModifiedValues) from May 3 to May 25
-- **runs.png** — 21 training runs from baseline → v11, showing the full iteration history
+- **1.webp** — 61 table revisions (EditedBoundingBox, CreatedBoundingBox, ModifiedValues) from May 3 to May 25
+- **2.webp** — 21 training runs from baseline → v11, showing the full iteration history
 
 ---
 
@@ -60,13 +60,13 @@ The `screenshots/` folder contains evidence of the label cleaning process:
 ├── verify_setup.py          # Environment check (from competition starter)
 ├── sample_submission.csv    # Submission template
 ├── screenshots/
-│   ├── tables.png           # 3LC Dashboard — 61 table revisions
-│   └── runs.png             # 3LC Dashboard — 21 training runs
+│   ├── 1.webp               # 3LC Dashboard — 61 table revisions
+│   └── 2.webp               # 3LC Dashboard — 21 training runs
 └── README.md
 ```
 
-> **Cleaned labels:** Available at [Kaggle Dataset — cleaned_data_v11](https://www.kaggle.com/datasets/cdanht2/cleaned-data-v11) (labels after all 3LC cleaning rounds).  
-> **Model weights:** Available at [Kaggle Dataset — 3lc-vehicle-detection-2nd-place-weights](https://www.kaggle.com/datasets/cdanht2/3lc-vehicle-detection-2nd-place-weights).  
+> **Cleaned labels:** [Kaggle Dataset — cleaned_data_v11](https://www.kaggle.com/datasets/cdanht2/cleaned-data-v11) (labels after all 3LC cleaning rounds).  
+> **Model weights:** [Kaggle Dataset — 3lc-vehicle-detection-2nd-place-weights](https://www.kaggle.com/datasets/cdanht2/3lc-vehicle-detection-2nd-place-weights).  
 > **Images** (train/val/test): Download from the [competition Data tab](https://www.kaggle.com/competitions/3-lc-multi-vehicle-detection-challenge/data).
 
 ---
@@ -229,7 +229,7 @@ Update `predict.weights` in `config.yaml` to point to `best.pt`, then:
 python predict_gamma.py
 ```
 
-Output: `v11_merge_trainvalx7_250ep.csv` (rename to `submission.csv` before uploading).
+Output: `v11_merge_trainvalx7_250ep.csv` — rename to `submission.csv` before uploading to Kaggle.
 
 ### Key inference settings (`config.yaml`)
 ```yaml
@@ -259,12 +259,13 @@ predict:
 1. Set up environment (see [Environment Setup](#environment-setup))
 2. Download competition images to `competition_starter/data/`
 3. Download cleaned labels from [Kaggle Dataset](https://www.kaggle.com/datasets/cdanht2/cleaned-data-v11), extract to `data/train/labels/`
-4. Register 3LC tables: `python register_tables.py`
-5. Run `train.ipynb` on Kaggle T4 (250 epochs, train+val merged, val×5)
-6. Run `python predict_gamma.py` with the output weights
-7. Upload CSV to Kaggle
+4. Run `train.ipynb` on Kaggle T4 (250 epochs, train+val merged, val×5)
+5. Download `best.pt` from the notebook output
+6. Set `predict.weights` in `config.yaml` to the path of `best.pt`
+7. Run `python predict_gamma.py` (with `GAMMA_VALUE = 1`)
+8. Upload output CSV to Kaggle
 
-> Note: The cleaned labels (`cleaned_data_v11`) already incorporate all label fixing done via 3LC. To reproduce the cleaning process from scratch, start from original labels and repeat the 3LC Missing Label Workflow loop many rounds.
+> The cleaned labels (`cleaned_data_v11`) already incorporate all label fixing done via 3LC. To reproduce the full cleaning process from scratch, start from the original competition labels and repeat the 3LC Missing Label Workflow loop many rounds using `register_tables.py` + `train.py`.
 
 ---
 
