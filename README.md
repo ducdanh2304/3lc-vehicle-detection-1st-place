@@ -1,301 +1,190 @@
-# 🚗 3LC Multi-Vehicle Detection Challenge — 2nd Place Solution
+<div align="center">
 
-**Competition:** [3LC Multi-Vehicle Detection Challenge](https://www.kaggle.com/competitions/3-lc-multi-vehicle-detection-challenge)  
-**Final Rank:** 🥈 2nd Place  
-**Public Score:** 0.95099 | **Private Score:** 0.94052  
-**Model:** YOLOv8n (from scratch, no pretrained weights)  
-**Key insight:** Data-centric iteration — repeatedly fixing missing labels via 3LC Dashboard drove the largest mAP gains.
+# Data-Centric Multi-Vehicle Detection
 
----
+### 🥇 1st Place — 3LC Multi-Vehicle Detection Challenge
 
-## Table of Contents
-1. [Approach Summary](#approach-summary)
-2. [Repository Structure](#repository-structure)
-3. [Environment Setup](#environment-setup)
-4. [Data Preparation](#data-preparation)
-5. [3LC Label Cleaning Workflow](#3lc-label-cleaning-workflow)
-6. [Training](#training)
-7. [Inference](#inference)
-8. [Reproducing the Final Result](#reproducing-the-final-result)
-9. [Key Hyperparameters](#key-hyperparameters)
+**A human-in-the-loop label auditing pipeline that turned imperfect annotations into a winning YOLOv8n detector.**
 
----
+[![Python](https://img.shields.io/badge/Python-3.9%2B-3776AB?logo=python&logoColor=white)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.x-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
+[![YOLOv8](https://img.shields.io/badge/YOLOv8n-from%20scratch-00FFFF)](https://docs.ultralytics.com/)
+[![3LC](https://img.shields.io/badge/3LC-data--centric-20D3C2)](https://3lc.ai/)
+[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
 
-## Approach Summary
+[Competition](https://www.kaggle.com/competitions/3-lc-multi-vehicle-detection-challenge) · [Official winner announcement](https://www.linkedin.com/posts/kelly-walker-6762278_another-kaggle-competition-in-the-books-activity-7476315509974671360-9zff) · [Cleaned labels](https://www.kaggle.com/datasets/cdanht2/cleaned-data-v11) · [Model weights](https://www.kaggle.com/datasets/cdanht2/3lc-vehicle-detection-2nd-place-weights) · [Technical deep dive](docs/solution.md)
 
-The architecture is fixed (YOLOv8n, 640 px, from scratch) per competition rules, so all gains came from **data quality**.
+</div>
 
-### Iteration loop
-```
-Train baseline → 3LC Dashboard (Missing Label Workflow) → Add missing labels → Retrain → Repeat (many rounds)
-```
+![Winning data-centric pipeline](assets/pipeline.svg)
 
-### What worked
-| Technique | Impact |
-|-----------|--------|
-| **Missing label detection via 3LC** (repeated many rounds) | Largest single gain — many vehicles were unlabeled in the original dataset |
-| **Merge train + val into training set** (val repeated 5×) | More training data for final submission |
-| **250 epochs with cosine LR + patience=0** | Stable convergence without early stopping |
-| **SGD with momentum=0.937** | Better than default Adam for this dataset |
-| **Strong augmentation** (mosaic, mixup, HSV, scale) | Improved generalization |
-| **Very low conf threshold at inference (0.00001)** | Maximized recall for mAP@0.5 |
+## Result at a glance
 
-### 3LC Dashboard evidence
-The `screenshots/` folder contains evidence of the label cleaning process:
-- **1.webp** — 61 table revisions (EditedBoundingBox, CreatedBoundingBox, ModifiedValues) from May 3 to May 25
-- **2.webp** — 21 training runs from baseline → v11, showing the full iteration history
+| Final rank | Private leaderboard | Public leaderboard | Scale |
+|:---:|:---:|:---:|:---:|
+| **🥇 1st** | **0.94052 mAP@0.5** | **0.95099 mAP@0.5** | 97 teams · 1,007 submissions |
 
----
+The challenge deliberately fixed the model budget: **YOLOv8n, 640 px, random
+initialization**. No pretrained weights, ensembles, TTA, or pseudo-labeling were
+allowed. The winning edge came from treating annotation quality as an engineering
+problem.
 
-## Repository Structure
+> The core insight: use model predictions to find suspicious labels, then keep a
+> human in the loop. High-confidence detections with no ground-truth overlap were
+> review candidates — never automatic labels.
 
-```
-├── train.ipynb              # Main training notebook (Kaggle T4)
-├── predict_gamma.py         # Inference script (gamma=1 for final submission)
-├── config.yaml              # Paths and hyperparameter config
-├── dataset.yaml             # YOLO dataset config (4 classes)
-├── register_tables.py       # Register 3LC Tables (from competition starter)
-├── train.py                 # 3LC-integrated training script (from competition starter)
-├── predict.py               # Base inference script (from competition starter)
-├── verify_setup.py          # Environment check (from competition starter)
-├── sample_submission.csv    # Submission template
-├── screenshots/
-│   ├── 1.webp               # 3LC Dashboard — 61 table revisions
-│   └── 2.webp               # 3LC Dashboard — 21 training runs
-└── README.md
+## What I built
+
+- **Data preprocessing and QA:** registered YOLO splits as versioned 3LC Tables;
+  surfaced likely missing annotations with `confidence > 0.5` and `IoU = 0`;
+  manually verified every accepted edit across **61 table revisions**.
+- **Training pipeline:** trained YOLOv8n from scratch for **250 epochs** with SGD,
+  cosine LR decay, Mosaic/MixUp augmentation, deterministic seeding, and late-stage
+  Mosaic shutdown.
+- **Experiment loop:** connected predictions and per-image metrics to the 3LC
+  Dashboard, completing **21 train → inspect → fix → retrain iterations**.
+- **Postprocessing:** implemented normalized submission serialization, recall-first
+  confidence filtering (`1e-5`), NMS at IoU `0.5`, and gamma-correction ablations.
+- **Reproducibility:** centralized paths and hyperparameters in YAML, added setup
+  validation, portable scratch initialization, and released labels and weights.
+
+## System design
+
+```text
+raw YOLO labels
+      │
+      ▼
+versioned 3LC Tables ──► YOLOv8n scratch training ──► per-image predictions
+      ▲                                                    │
+      │                                                    ▼
+new table revision ◄── human review ◄── conf > .5 AND IoU = 0
+
+final cleaned data ──► 250-epoch fit ──► NMS + serialization ──► Kaggle
 ```
 
-> **Cleaned labels:** [Kaggle Dataset — cleaned_data_v11](https://www.kaggle.com/datasets/cdanht2/cleaned-data-v11) (labels after all 3LC cleaning rounds).  
-> **Model weights:** [Kaggle Dataset — 3lc-vehicle-detection-2nd-place-weights](https://www.kaggle.com/datasets/cdanht2/3lc-vehicle-detection-2nd-place-weights).  
-> **Images** (train/val/test): Download from the [competition Data tab](https://www.kaggle.com/competitions/3-lc-multi-vehicle-detection-challenge/data).
+The loop is intentionally conservative. A prediction is only a signal that an
+annotation may be missing; a person decides whether the box and class are valid.
+This avoids converting model errors into training labels.
 
----
+## Evidence of the iteration loop
 
-## Environment Setup
+| Data lineage | Experiment lineage |
+|---|---|
+| ![61 versioned table revisions in 3LC](screenshots/1.webp) | ![21 tracked training runs in 3LC](screenshots/2.webp) |
+| Bounding-box edits remain auditable across 61 revisions. | Baseline-to-final experiments remain comparable across 21 runs. |
 
-### Requirements
-- Python 3.9–3.13
-- NVIDIA GPU strongly recommended
-- Chrome or Edge (for 3LC Dashboard)
+## Repository structure
 
-### Install
+```text
+.
+├── assets/pipeline.svg       # Portfolio-ready method overview
+├── docs/solution.md          # Decisions, ablations, and technical rationale
+├── screenshots/              # 3LC data/run lineage evidence
+├── register_tables.py        # YOLO → versioned 3LC Tables
+├── train.py                  # 3LC-integrated iteration training
+├── train.ipynb               # Final 250-epoch Kaggle training run
+├── predict.py                # Baseline inference and CSV export
+├── predict_gamma.py          # Gamma ablation + final inference path
+├── verify_setup.py           # Preflight checks for packages, GPU, and data
+├── config.yaml               # Paths, training, and inference configuration
+├── dataset.yaml              # Four-class YOLO dataset definition
+└── sample_submission.csv     # Required output schema
+```
+
+## Reproduce the result
+
+### 1. Set up the environment
 
 ```bash
-# 1. Create virtual environment
-python -m venv 3lc-env
-# Windows:
-3lc-env\Scripts\activate
-# Linux/macOS:
-source 3lc-env/bin/activate
+python -m venv .venv
+# Windows: .venv\Scripts\activate
+# Linux/macOS: source .venv/bin/activate
 
-# 2. Install PyTorch with CUDA (adjust cu121 to your CUDA version)
 pip install torch torchvision --index-url https://download.pytorch.org/whl/cu121
-
-# 3. Install 3LC stack
 pip install --index-url https://pypi.3lc.ai/public/repositories/releases-public \
-            --extra-index-url https://pypi.org/simple \
-            3lc-ultralytics 3lc==2.23.0 umap-learn PyYAML tqdm
-
-# 4. Install ultralytics + other deps (for train.ipynb)
-pip install ultralytics opencv-python numpy
-
-# 5. Login to 3LC (one-time)
-3lc login <your_api_key>
+  --extra-index-url https://pypi.org/simple 3lc==2.23.0 3lc-ultralytics
+pip install -r requirements.txt
+python verify_setup.py
 ```
 
-Verify GPU:
+Then authenticate once with `3lc login <YOUR_API_KEY>`.
+
+### 2. Prepare the data
+
+Download the competition images and the released
+[cleaned labels](https://www.kaggle.com/datasets/cdanht2/cleaned-data-v11):
+
+```text
+data/
+├── train/{images,labels}
+├── val/{images,labels}
+└── test/images
+```
+
+### 3. Recreate the data-centric loop
+
 ```bash
-python -c "import torch; print('CUDA:', torch.cuda.is_available()); print('GPU:', torch.cuda.get_device_name(0))"
-```
-
----
-
-## Data Preparation
-
-1. Download competition images from the [competition Data tab](https://www.kaggle.com/competitions/3-lc-multi-vehicle-detection-challenge/data)
-2. Download cleaned labels (`cleaned_data_v11.zip`) from [Kaggle Dataset](https://www.kaggle.com/datasets/cdanht2/cleaned-data-v11) and extract
-
-Place everything at:
-```
-competition_starter/
-├── data/
-│   ├── train/
-│   │   ├── images/          ← from competition
-│   │   └── labels/          ← from cleaned_data_v11 (use these, not original)
-│   ├── val/
-│   │   ├── images/          ← from competition
-│   │   └── labels/          ← from competition (original val labels)
-│   └── test/
-│       └── images/          ← from competition
-├── dataset.yaml
-├── config.yaml
-└── sample_submission.csv
-```
-
----
-
-## 3LC Label Cleaning Workflow
-
-This was the **core of the solution**. The competition provides imperfect labels — many vehicles appear in images without any bounding box annotation.
-
-### Step 1 — Register tables and run baseline training
-```bash
-cd competition_starter/
 python register_tables.py
 python train.py
 ```
 
-### Step 2 — Start 3LC service and open Dashboard
-```bash
-3lc service   # keep this terminal open
-# Open https://dashboard.3lc.ai in Chrome/Edge
-```
+Open the latest Run in the 3LC Dashboard, filter predictions by
+`confidence > 0.5` and `iou = 0`, manually review candidates, save the new Table
+revision, and retrain. See [the full methodology](docs/solution.md).
 
-### Step 3 — Find missing labels (Missing Label Workflow)
-In the Dashboard, open the latest Run and apply the **Missing Label Workflow**:
+### 4. Train the final model
 
-1. Go to **Runs** → select the latest run
-2. Switch to the **Val** split
-3. Filter: `confidence > 0.5` AND `iou = 0`  
-   → high-confidence predictions with no matching ground-truth box = likely missing label
-4. Review each flagged image — if the model's predicted box is correct, add it as a ground-truth label
-5. Save → 3LC automatically creates a new **table revision** (data is versioned, nothing lost)
+Run `train.ipynb` on a Kaggle T4 GPU. The final configuration was:
 
-### Step 4 — Retrain with updated labels
-```bash
-python train.py   # automatically picks up .latest() revision
-```
+| Parameter | Value | Parameter | Value |
+|---|---:|---|---:|
+| Model | YOLOv8n | Initialization | Random |
+| Image size | 640 | Epochs | 250 |
+| Batch | 64 | Optimizer | SGD |
+| Initial / final LR factor | 0.01 / 0.01 | Momentum | 0.937 |
+| Mosaic / MixUp | 1.0 / 0.1 | Close Mosaic | 20 epochs |
+| Weight decay | 0.0005 | Seed | 42 |
 
-### Step 5 — Repeat many rounds
-Repeat steps 2–4 many times until mAP stops improving. The result of all cleaning rounds is saved as `cleaned_data_v11` (61 table revisions, 21 training runs total — see `screenshots/`).
+The final competition fit consolidated train and validation data and repeated the
+validation subset five times. This is a final-fit tactic, not a recommended model
+selection protocol; keep a held-out validation set during normal development.
 
----
+### 5. Generate a submission
 
-## Training
-
-### Final model — `train.ipynb` (Kaggle T4)
-
-The final model merges train + val into one training set (val repeated 5× to compensate for the smaller val size), then trains for 250 epochs with no separate validation split:
-
-```python
-EPOCHS     = 250
-BATCH      = 64
-IMGSZ      = 640
-VAL_REPEAT = 5      # val images added 5× into training set
-SEED       = 42
-```
-
-Key training settings:
-```python
-model.train(
-    optimizer     = 'SGD',
-    lr0           = 0.01,
-    lrf           = 0.01,
-    momentum      = 0.937,
-    weight_decay  = 0.0005,
-    warmup_epochs = 3,
-    close_mosaic  = 20,
-    patience      = 0,       # no early stopping
-    mixup         = 0.1,
-    mosaic        = 1.0,
-    scale         = 0.6,
-    cos_lr        = True,
-    pretrained    = False,   # from scratch — competition rule
-    val           = False,   # no separate val split (merged into train)
-)
-```
-
-```
-Runtime  : Kaggle T4 GPU
-Time     : ~2–3 hours (250 epochs, batch=64)
-Output   : runs_V11_val5x_org_250ep/v11_val5x_250ep/weights/best.pt
-```
-
-### Iteration training — `train.py` (local, 3LC-integrated)
-Used during the label cleaning loop (not the final submission):
-```bash
-cd competition_starter/
-python train.py
-```
-Configured via `config.yaml` → `training` section.
-
----
-
-## Inference
-
-Update `predict.weights` in `config.yaml` to point to `best.pt`, then:
+Set `predict.weights` in `config.yaml`, then run:
 
 ```bash
 python predict_gamma.py
 ```
 
-Output: `v11_merge_trainvalx7_250ep.csv` — rename to `submission.csv` before uploading to Kaggle.
+The winning configuration uses gamma `1.0` (no correction), confidence `1e-5`,
+NMS IoU `0.5`, and `max_det=300`. The script writes `submission.csv`.
 
-### Key inference settings (`config.yaml`)
-```yaml
-predict:
-  weights: /path/to/best.pt
-  conf: 0.00001   # very low → maximize recall for mAP@0.5
-  iou: 0.5
-  imgsz: null     # uses 640 (from training)
-  device: 0
-  max_det: 300
-  batch: 16
-```
+## Key experiments and lessons
 
-> `GAMMA_VALUE = 1` in `predict_gamma.py` = no gamma correction. The gamma experiment did not improve results; final submission used `gamma=1`.
+| Experiment | Decision | Learning |
+|---|---|---|
+| Model-assisted missing-label search | **Keep** | Highest-value improvement; targeted human review scales label QA. |
+| Versioned edit/retrain loop | **Keep** | Data lineage made every correction traceable and reversible. |
+| Train + val×5 final fit | **Final fit only** | Uses all labeled data after model selection; unsuitable for validation-time comparisons. |
+| Recall-first inference threshold | **Keep** | Preserved candidate boxes for mAP@0.5 evaluation. |
+| Gamma correction | **Reject** | Did not improve the final result; gamma 1.0 won. |
 
----
+## CV-ready project summary
 
-## Reproducing the Final Result
-
-### Quick path (inference only)
-1. Download `best.pt` from [Kaggle Dataset](https://www.kaggle.com/datasets/cdanht2/3lc-vehicle-detection-2nd-place-weights)
-2. Set `predict.weights` in `config.yaml` to the path of `best.pt`
-3. Run `python predict_gamma.py` (with `GAMMA_VALUE = 1`)
-4. Upload output CSV to Kaggle
-
-### Full reproduction (train from scratch)
-1. Set up environment (see [Environment Setup](#environment-setup))
-2. Download competition images to `competition_starter/data/`
-3. Download cleaned labels from [Kaggle Dataset](https://www.kaggle.com/datasets/cdanht2/cleaned-data-v11), extract to `data/train/labels/`
-4. Run `train.ipynb` on Kaggle T4 (250 epochs, train+val merged, val×5)
-5. Download `best.pt` from the notebook output
-6. Set `predict.weights` in `config.yaml` to the path of `best.pt`
-7. Run `python predict_gamma.py` (with `GAMMA_VALUE = 1`)
-8. Upload output CSV to Kaggle
-
-> The cleaned labels (`cleaned_data_v11`) already incorporate all label fixing done via 3LC. To reproduce the full cleaning process from scratch, start from the original competition labels and repeat the 3LC Missing Label Workflow loop many rounds using `register_tables.py` + `train.py`.
-
----
-
-## Key Hyperparameters
-
-| Parameter | Value | Note |
-|-----------|-------|-------|
-| Model | YOLOv8n | Competition constraint |
-| Pretrained | False | Competition constraint — random init |
-| Epochs | 250 | Final run |
-| Batch | 64 | Kaggle T4 |
-| IMGSZ | 640 | Competition constraint |
-| Optimizer | SGD | |
-| lr0 | 0.01 | Cosine decay |
-| lrf | 0.01 | Final LR = lr0 × lrf |
-| momentum | 0.937 | |
-| weight_decay | 0.0005 | |
-| warmup_epochs | 3 | |
-| close_mosaic | 20 | Disable mosaic last 20 epochs |
-| mixup | 0.1 | |
-| patience | 0 | No early stopping |
-| val_repeat | 5 | Val added 5× into training set |
-| conf (infer) | 0.00001 | Low threshold for max recall |
-| iou (infer) | 0.5 | NMS threshold |
-| seed | 42 | |
-
----
+> Won **1st place out of 97 teams** in the 3LC Multi-Vehicle Detection Challenge
+> by building a data-centric YOLOv8n pipeline: audited missing annotations through
+> model-assisted human review across 61 versioned dataset revisions and 21 training
+> runs; trained from scratch for 250 epochs; and optimized recall-first NMS and
+> submission postprocessing, achieving **0.94052 private mAP@0.5**.
 
 ## Acknowledgements
 
-- [3LC](https://3lc.ai) — platform, Dashboard, and label versioning tools
-- Dataset based on [UA-DETRAC benchmark](https://detrac-db.rit.albany.edu/) (Wen et al., 2020), adapted via Roboflow Universe
-- Competition organized by [RishikeshJadhav3LC](https://www.kaggle.com/rishikeshjadhav3lc)
+- [3LC](https://3lc.ai/) for the data-centric tooling and challenge design.
+- [Ultralytics](https://www.ultralytics.com/) for YOLOv8.
+- [UA-DETRAC](https://detrac-db.rit.albany.edu/) for the underlying traffic video benchmark.
+
+## License
+
+Code in this repository is available under the [MIT License](LICENSE). Competition
+data and third-party assets remain subject to their original terms.

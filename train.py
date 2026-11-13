@@ -250,7 +250,10 @@ def main() -> int:
         image_embeddings_reducer=emb_reducer,
     )
 
-    model = YOLO(r"C:\KHMT\KAGGLE_COMPETITION\3lc\models\runs_V11_trainval_120ep\uns_V11_trainval_120ep\v11_org_merge_trainval_120ep\weights\best.pt")
+    # The competition required random initialization.  Keeping the architecture
+    # YAML here (rather than a local .pt path) makes that constraint explicit and
+    # allows the script to run on any machine.
+    model = YOLO(model_path)
     train_args: dict = {
         "tables": {"train": train_table, "val": val_table},
         "name": run_name,

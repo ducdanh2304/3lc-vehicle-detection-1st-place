@@ -1,0 +1,9 @@
+numpy
+opencv-python
+PyYAML
+torch
+torchvision
+tqdm
+ultralytics
+umap-learn
+# Install 3lc and 3lc-ultralytics from the 3LC package index; see README.md.
