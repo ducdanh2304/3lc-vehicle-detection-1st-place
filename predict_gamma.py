@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""
-predict_gamma.py — wrapper của predict.py, thêm gamma preprocessing trước khi infer.
-Chỉnh GAMMA_VALUE rồi chạy: python predict_gamma.py
-Output: submission_gamma.csv (không ghi đè submission.csv gốc)
+"""Run inference with optional gamma correction.
+
+The winning submission used gamma=1.0 (no correction). Change GAMMA_VALUE only
+when reproducing the ablation experiment.
 """
 from __future__ import annotations
 import csv, gc, os, shutil, sys
@@ -17,12 +17,8 @@ try:
 except ImportError:
     def tqdm(x, **kwargs): return x
 
-# ══════════════════════════════════════════════════════════════════
-#  CHỈNH Ở ĐÂY
-# ══════════════════════════════════════════════════════════════════
-GAMMA_VALUE = 1.2   # thay bằng giá trị muốn test (1.6, 2.0, ...)
-OUTPUT_CSV  = "submission.csv"   # file output riêng, không đè bản gốc
-# ══════════════════════════════════════════════════════════════════
+GAMMA_VALUE = 1.0  # Winning configuration; try 1.2, 1.6, ... for ablations.
+OUTPUT_CSV = "submission.csv"
 
 WORK_DIR = Path(__file__).resolve().parent
 

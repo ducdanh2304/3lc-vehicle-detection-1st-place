@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="430" viewBox="0 0 1200 430" role="img" aria-labelledby="title desc">
+  <title id="title">Winning data-centric vehicle detection pipeline</title>
+  <desc id="desc">From raw annotations through model-assisted label auditing, scratch training, postprocessing, and first place result.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#07111f"/><stop offset="1" stop-color="#0d2236"/></linearGradient>
+    <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#20d3c2"/><stop offset="1" stop-color="#38a3ff"/></linearGradient>
+    <filter id="shadow"><feDropShadow dx="0" dy="8" stdDeviation="10" flood-opacity=".25"/></filter>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0L10 5L0 10Z" fill="#5b7894"/></marker>
+    <style>.h{font:700 26px Arial,sans-serif;fill:#fff}.k{font:700 15px Arial,sans-serif;fill:#59e6d7;letter-spacing:1.4px}.t{font:700 19px Arial,sans-serif;fill:#f5f9ff}.s{font:400 14px Arial,sans-serif;fill:#a9bdd0}.n{font:700 15px Arial,sans-serif;fill:#061422}.card{fill:#10283e;stroke:#234760;stroke-width:1.5}</style>
+  </defs>
+  <rect width="1200" height="430" rx="24" fill="url(#bg)"/>
+  <text x="56" y="56" class="k">WINNING SOLUTION</text><text x="56" y="91" class="h">Data quality was the model advantage</text>
+  <path d="M244 238H286M474 238H516M704 238H746M934 238H976" stroke="#5b7894" stroke-width="3" marker-end="url(#arrow)"/>
+  <g filter="url(#shadow)"><rect class="card" x="44" y="145" width="200" height="186" rx="18"/><circle cx="82" cy="184" r="20" fill="url(#accent)"/><text x="77" y="190" class="n">1</text><text x="70" y="230" class="t">Register data</text><text x="70" y="260" class="s">YOLO splits → 3LC Tables</text><text x="70" y="284" class="s">Versioned annotations</text></g>
+  <g filter="url(#shadow)"><rect class="card" x="274" y="145" width="200" height="186" rx="18"/><circle cx="312" cy="184" r="20" fill="url(#accent)"/><text x="307" y="190" class="n">2</text><text x="300" y="230" class="t">Audit labels</text><text x="300" y="260" class="s">conf &gt; .5 · IoU = 0</text><text x="300" y="284" class="s">Human verification</text><text x="300" y="308" class="s">61 data revisions</text></g>
+  <g filter="url(#shadow)"><rect class="card" x="504" y="145" width="200" height="186" rx="18"/><circle cx="542" cy="184" r="20" fill="url(#accent)"/><text x="537" y="190" class="n">3</text><text x="530" y="230" class="t">Train from scratch</text><text x="530" y="260" class="s">YOLOv8n · 640 px</text><text x="530" y="284" class="s">250 epochs · SGD</text><text x="530" y="308" class="s">Cosine LR · augmentation</text></g>
+  <g filter="url(#shadow)"><rect class="card" x="734" y="145" width="200" height="186" rx="18"/><circle cx="772" cy="184" r="20" fill="url(#accent)"/><text x="767" y="190" class="n">4</text><text x="760" y="230" class="t">Postprocess</text><text x="760" y="260" class="s">Recall-first threshold</text><text x="760" y="284" class="s">NMS IoU = .5</text><text x="760" y="308" class="s">Submission serialization</text></g>
+  <g filter="url(#shadow)"><rect x="964" y="145" width="192" height="186" rx="18" fill="url(#accent)"/><text x="990" y="190" class="n">RESULT</text><text x="990" y="237" style="font:700 38px Arial,sans-serif;fill:#061422">🥇 1st</text><text x="990" y="271" class="n">0.94052 private</text><text x="990" y="298" style="font:600 14px Arial,sans-serif;fill:#173047">97 teams · 1,007 entries</text></g>
+  <path d="M374 346C374 389 604 389 604 346" fill="none" stroke="#20d3c2" stroke-width="2" stroke-dasharray="7 7" marker-end="url(#arrow)"/><text x="420" y="408" class="s">repeat: train → inspect → fix → retrain</text>
+</svg>
